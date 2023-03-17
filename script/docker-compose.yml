@@ -2,13 +2,39 @@ version: '3'
 name: 'mcsvc'
 
 services:
+  postgres:
+    image: 'postgres:latest'
+    ports:
+      - '5555:5432'
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: users
+
   broker-service:
-    build: 
+    build:
       context: ./../broker
       dockerfile: ./../broker/broker.dockerfile
     restart: always
     ports:
-      - "8080:80"
-    deploy: 
+      - '8080:80'
+    deploy:
       mode: replicated
       replicas: 1
+
+  auth-service:
+    build:
+      context: ./../authentication
+      dockerfile: ./../authentication/authentication.dockerfile
+    restart: always
+    ports:
+      - '8081:80'
+    deploy:
+      mode: replicated
+      replicas: 1
+    environment:
+      DSN: "postgresql://postgres:password@postgres:5432/users?sslmode=disable"
+      # DSN: "host=postgres port=5555 user=postgres password=password dbname=users sslmode=disable timezone=UTC"
