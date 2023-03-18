@@ -9,6 +9,7 @@ type Output = {
 enum From {
   INITIAL = 'INITIAL',
   BROKER = 'BROKER',
+  AUTH = 'AUTH',
   ERROR = 'ERROR',
 }
 
@@ -25,12 +26,47 @@ const testBroker = async () => {
       method: 'POST',
     };
 
-    const response = await fetch('http://localhost:8080', body);
+    const response = await fetch('http://localhost:8082', body);
     const data = await response.json();
 
     setPayload(`Empty post request`);
     setReceived(JSON.stringify(data, undefined, 4));
     setOutput({ from: From.BROKER, result: data.message });
+
+    if (data.error) {
+      throw new Error(data.message);
+    }
+  } catch (error) {
+    console.error(error);
+    setOutput({ from: From.ERROR, result: error });
+  }
+};
+
+const testAuth = async () => {
+  const payload = {
+    action: 'auth',
+    auth: {
+      email: 'admin@example.com',
+      password: 'verysecret',
+    },
+  };
+
+  const headers = new Headers();
+  headers.append('Content-Type', 'application/json');
+
+  const body = {
+    method: 'POST',
+    body: JSON.stringify(payload),
+    headers: headers,
+  };
+
+  try {
+    const response = await fetch('http://localhost:8082/handle', body);
+    const data = await response.json();
+
+    setPayload(`Empty post request`);
+    setReceived(JSON.stringify(data, undefined, 4));
+    setOutput({ from: From.AUTH, result: data.message });
 
     if (data.error) {
       throw new Error(data.message);
@@ -53,6 +89,12 @@ const App: Component = () => {
           >
             Test Broker
           </button>
+          <button
+            class='class="inline-block align-middle text-center select-none border font-normal whitespace-no-wrap rounded py-1 px-3 leading-normal no-underline text-gray-600 border-gray-600 hover:bg-gray-600 hover:text-white bg-white hover:bg-gray-700"'
+            onClick={testAuth}
+          >
+            Test Auth
+          </button>
           <div
             id='output'
             class='mt-5'
@@ -64,7 +106,8 @@ const App: Component = () => {
                 fallback={`See output here`}
               >
                 <p>
-                  <strong>Response from {output.from} service</strong> : {output.result}
+                  <strong>Response from {output.from} service</strong> :{' '}
+                  {output.result}
                 </p>
               </Show>
             </pre>
